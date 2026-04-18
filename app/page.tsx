@@ -103,6 +103,9 @@ export default function Home() {
     }
 
     setGeneratedLink(`${window.location.origin}/gift/${shortId}`);
+    setRecipient('');
+    setMessage('');
+    setSender('');
   };
 
   const handleCopyLink = () => {
