@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import anime from 'animejs';
 import Link from 'next/link';
+import { toPng } from 'html-to-image';
 
 import { Bouquet } from '@/app/lib/bouquets';
 
@@ -14,9 +15,11 @@ type Letter = {
 
 export default function GiftPresentation({ letter, flower }: { letter: Letter; flower: Bouquet }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const flowerRef = useRef<HTMLImageElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const cardElementRef = useRef<HTMLDivElement>(null);
   const detailsRef = useRef<HTMLDivElement>(null);
 
   const handleOpen = () => {
@@ -41,14 +44,14 @@ export default function GiftPresentation({ letter, flower }: { letter: Letter; f
       })
       // Animate the card
       .add({
-        targets: cardRef.current,
+        targets: cardElementRef.current,
         translateY: [100, 0],
         opacity: [0, 1],
         duration: 1500,
       }, '-=1500')
       // Animate the text inside the card
       .add({
-        targets: cardRef.current?.querySelectorAll('.animate-text'),
+        targets: cardElementRef.current?.querySelectorAll('.animate-text'),
         translateY: [20, 0],
         opacity: [0, 1],
         duration: 1000,
@@ -79,6 +82,30 @@ export default function GiftPresentation({ letter, flower }: { letter: Letter; f
       }, flower.animation.entrance.duration);
     }
   }, [isOpen, flower]);
+
+  const handleDownload = async () => {
+    if (!cardRef.current) return;
+    
+    setIsDownloading(true);
+    
+    try {
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        backgroundColor: '#FDFBF7',
+        pixelRatio: 2,
+      });
+      
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `PixelBouquet_from_${letter.sender}.png`;
+      link.click();
+    } catch (error) {
+      console.error('Error downloading card:', error);
+      alert('حدث خطأ أثناء تحميل البطاقة. حاول مرة أخرى.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="max-w-md w-full flex flex-col items-center relative z-10 mt-20" ref={containerRef}>
@@ -134,9 +161,10 @@ export default function GiftPresentation({ letter, flower }: { letter: Letter; f
             <span className="block w-9 h-px bg-[#D4B5A8]" />
           </p>
 
-          <div className="relative w-full">
+          {/* The Downloadable Card Area */}
+          <div ref={cardRef} className="relative w-full flex flex-col items-center bg-[#FDFBF7] pt-8 pb-8 px-2 md:px-6 rounded-[3rem] mt-12">
             {/* Floating flower */}
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-48 h-48 flex items-center justify-center z-10 pointer-events-none">
+            <div className="relative w-48 h-48 flex items-center justify-center z-10 pointer-events-none -mb-16">
               <div className="absolute inset-0 rounded-full bg-gradient-radial from-rose-200/50 to-transparent blur-xl" />
               <img
                 ref={flowerRef}
@@ -148,8 +176,8 @@ export default function GiftPresentation({ letter, flower }: { letter: Letter; f
 
             {/* Paper card */}
             <div
-              ref={cardRef}
-              className="bg-[#FFFDF9] rounded-[2rem] border border-[#EDE4D9] relative pt-28 pb-10 px-10 opacity-0"
+              ref={cardElementRef}
+              className="bg-[#FFFDF9] rounded-[2rem] border border-[#EDE4D9] relative pt-20 pb-10 px-10 opacity-0 w-full"
               style={{
                 boxShadow: '0 2px 8px rgba(160,100,80,0.05), 0 24px 64px rgba(160,100,80,0.09)',
                 backgroundImage: 'repeating-linear-gradient(transparent, transparent 27px, rgba(210,190,170,0.13) 27px, rgba(210,190,170,0.13) 28px)',
@@ -164,18 +192,18 @@ export default function GiftPresentation({ letter, flower }: { letter: Letter; f
               {/* Letter body */}
               <div className="relative z-10">
                 <h1 className="font-serif text-[#3D2B1F] mb-8 animate-text opacity-0" dir="rtl">
-                  <span className="block text-[10px] font-sans font-light tracking-[0.18em] uppercase text-[#C4A898] mb-1">لـ</span>
+                  <span className="block text-[10px] font-sans font-light tracking-[0.18em] uppercase text-[#C4A898] mb-1">إلى</span>
                   <span className="text-3xl">{letter.recipient}،</span>
                 </h1>
 
                 <div className="border-l-2 border-[#E8DDD3] pl-5 mb-8 animate-text opacity-0">
-                  <p className="font-serif text-[15px] leading-[1.95] text-[#6B5548] italic whitespace-pre-wrap">
+                  <p className="font-serif text-[15px] leading-[1.95] text-[#6B5548] italic whitespace-pre-wrap break-words overflow-hidden">
                     {letter.message}
                   </p>
                 </div>
 
                 <div className="flex flex-col items-end border-t border-[#EDE4D9] pt-5 animate-text opacity-0" dir="rtl">
-                  <span className="text-[10px] font-sans font-light tracking-[0.2em] uppercase text-[#C4A898] mb-1">من</span>
+                  <span className="text-[10px] font-sans font-light tracking-[0.2em] uppercase text-[#C4A898] mb-1">المرسل</span>
                   <span className="font-serif text-2xl text-[#3D2B1F]">{letter.sender}</span>
                 </div>
               </div>
@@ -216,10 +244,33 @@ export default function GiftPresentation({ letter, flower }: { letter: Letter; f
                 </div>
               </div>
             </div>
-
+            
+            {/* Watermark for downloaded image */}
+            <div className="mt-8 mb-2 flex flex-col items-center justify-center opacity-40">
+              <span className="w-6 h-px bg-[#D4B5A8] mb-2"></span>
+              <span className="text-[9px] font-sans font-bold tracking-[0.25em] uppercase text-[#B08A7A]">Pixel Bouquet</span>
+            </div>
           </div>
 
-          <Link href="/" className="mt-14 mb-10 text-xs font-light text-[#C4A898] hover:text-[#7A4F3D] transition-colors tracking-wide border-b border-[#D9C4B8] pb-0.5 opacity-0 animate-[fadeIn_1s_forwards] delay-1000" dir="rtl">
+          {/* Download Action */}
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="mt-8 flex items-center justify-center gap-3 bg-[#3D2B1F] text-white px-8 py-4 rounded-full font-bold tracking-widest text-[11px] uppercase transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1 disabled:opacity-70 disabled:cursor-not-allowed opacity-0 animate-[fadeIn_1s_forwards] delay-[1500ms]"
+          >
+            {isDownloading ? (
+              <span dir="rtl">بنحفظ هديتك...</span>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-sm">⬇</span>
+                <span dir="rtl">حفظ كصورة</span>
+              </div>
+            )}
+          </button>
+
+
+
+          <Link href="/" className="mt-8 mb-10 text-xs font-light text-[#C4A898] hover:text-[#7A4F3D] transition-colors tracking-wide border-b border-[#D9C4B8] pb-0.5 opacity-0 animate-[fadeIn_1s_forwards] delay-[1500ms]" dir="rtl">
             اعمل باقة بنفسك ←
           </Link>
         </div>

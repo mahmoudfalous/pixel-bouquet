@@ -1,8 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from "@/app/lib/supabase";
 import { Bouquet, BOUQUETS } from "@/app/lib/bouquets";
+
+interface SentGift {
+  id: string;
+  recipient: string;
+  flowerName: string;
+  date: string;
+}
 
 export default function Home() {
   const [selectedBouquet, setSelectedBouquet] = useState<Bouquet | null>(null);
@@ -14,6 +21,20 @@ export default function Home() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  
+  const [sentGifts, setSentGifts] = useState<SentGift[]>([]);
+
+  useEffect(() => {
+    const history = localStorage.getItem('pixel_bouquet_history');
+    if (history) {
+      try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSentGifts(JSON.parse(history));
+      } catch (e) {
+        console.error('Error parsing history', e);
+      }
+    }
+  }, []);
 
   const isFormValid =
     recipient.trim().length > 0 &&
@@ -50,6 +71,17 @@ export default function Home() {
       alert("Something went wrong saving your bouquet! Check the console.");
       return;
     }
+
+    const newGift: SentGift = {
+      id: shortId,
+      recipient: trimmedRecipient,
+      flowerName: selectedBouquet.name,
+      date: new Date().toISOString(),
+    };
+
+    const updatedHistory = [newGift, ...sentGifts];
+    setSentGifts(updatedHistory);
+    localStorage.setItem('pixel_bouquet_history', JSON.stringify(updatedHistory));
 
     setGeneratedLink(`${window.location.origin}/gift/${shortId}`);
     setRecipient('');
@@ -215,7 +247,7 @@ export default function Home() {
               <div className="text-right mb-10" dir="rtl">
                 <span className="text-[10px] text-[#8A7A6F] uppercase tracking-[0.2em] font-bold">رسالتك من القلب</span>
                 <h2 className="text-3xl md:text-4xl font-bold mt-2 text-[#3D2B1F] font-serif">
-                  ابعت <span className="text-[#C87E6F] italic">{selectedBouquet.name}</span>
+                  أرسل <span className="text-[#C87E6F] italic">{selectedBouquet.name}</span>
                 </h2>
               </div>
 
@@ -227,7 +259,7 @@ export default function Home() {
                 <div className="flex flex-col space-y-10 z-10 relative px-2" dir="rtl">
                   
                   <div className="flex items-end gap-4">
-                    <label className="text-xl font-serif text-[#3D2B1F]">لميـن</label>
+                    <label className="text-xl font-serif text-[#3D2B1F]">إلى</label>
                     <input
                       type="text"
                       placeholder="لأغلى حد،"
@@ -251,7 +283,7 @@ export default function Home() {
                     <label className="text-lg font-serif text-[#3D2B1F] mb-2">بكل حُب،</label>
                     <input
                       type="text"
-                      placeholder="من ميـن"
+                      placeholder="المرسل"
                       value={sender}
                       onChange={(e) => setSender(e.target.value)}
                       className="w-64 bg-transparent text-xl font-serif text-[#6B5548] focus:text-[#3D2B1F] focus:outline-none border-b-2 border-dashed border-[#E8DDD3] focus:border-[#C87E6F] pb-2 transition-colors placeholder:text-[#D4B5A8]"
@@ -268,7 +300,7 @@ export default function Home() {
                     disabled={isGenerateDisabled}
                     className="w-full relative overflow-hidden group bg-[#3D2B1F] text-white px-8 py-5 rounded-full font-bold tracking-widest uppercase text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_20px_rgba(61,43,31,0.3)] hover:shadow-[0_15px_30px_rgba(61,43,31,0.4)]"
                   >
-                    <span className="relative z-10">{isSaving ? 'بنجهّز هديتك...' : 'اعمل رابط الهدية'}</span>
+                    <span className="relative z-10">{isSaving ? 'بنجهّز هديتك...' : 'إنشاء رابط الهدية'}</span>
                     <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
                   </button>
                 ) : (
@@ -281,7 +313,7 @@ export default function Home() {
                           isCopied ? 'bg-[#849F86] hover:bg-[#728A74]' : 'bg-[#C87E6F] hover:bg-[#B56E5F]'
                         }`}
                       >
-                        {isCopied ? 'اتنسخ!' : 'انسخ الرابط'}
+                        {isCopied ? 'تم النسخ' : 'نسخ الرابط'}
                       </button>
                       <input
                         type="text"
@@ -296,6 +328,52 @@ export default function Home() {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 3: SENT GIFTS HISTORY */}
+      {!isDrafting && sentGifts.length > 0 && (
+        <div className="max-w-6xl mx-auto mt-32 relative z-10 animate-in fade-in duration-1000 mb-20">
+          <div className="flex items-center justify-center gap-4 mb-10">
+            <span className="w-12 h-px bg-[#D4B5A8]"></span>
+            <h2 className="text-2xl font-serif text-[#3D2B1F] tracking-wide" dir="rtl">سجل هداياك</h2>
+            <span className="w-12 h-px bg-[#D4B5A8]"></span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sentGifts.map((gift) => (
+              <div key={gift.id} className="bg-white/40 backdrop-blur-xl p-6 rounded-[2rem] shadow-sm border border-white/60 flex flex-col transition-all hover:bg-white/60 hover:-translate-y-1 hover:shadow-md" dir="rtl">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="text-[10px] text-[#C87E6F] font-bold uppercase tracking-widest mb-1">{gift.flowerName}</p>
+                    <p className="font-serif text-lg text-[#3D2B1F]">إلى: {gift.recipient}</p>
+                  </div>
+                  <span className="text-xs text-[#8A7A6F] font-light">
+                    {new Date(gift.date).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+                
+                <div className="flex gap-2 mt-auto pt-4 border-t border-[#E8DDD3]/50">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/gift/${gift.id}`);
+                      alert('تم نسخ الرابط بنجاح!');
+                    }}
+                    className="flex-1 bg-transparent hover:bg-[#FDFBF7] text-[#849F86] border border-[#849F86]/30 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm"
+                  >
+                    نسخ الرابط
+                  </button>
+                  <a
+                    href={`/gift/${gift.id}`}
+                    target="_blank"
+                    className="flex-1 flex justify-center items-center bg-[#C87E6F] hover:bg-[#B56E5F] text-white px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm"
+                  >
+                    عرض الهدية
+                  </a>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
