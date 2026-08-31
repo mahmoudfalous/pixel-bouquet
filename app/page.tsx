@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from "@/app/lib/supabase";
 import { Bouquet, BOUQUETS } from "@/app/lib/bouquets";
+import SurpriseDeliveryModal from "@/app/components/SurpriseDeliveryModal";
 
 interface SentGift {
   id: string;
   recipient: string;
   flowerName: string;
+  bouquetId?: string;
   date: string;
 }
 
@@ -18,17 +20,23 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [sender, setSender] = useState('');
   const [generatedLink, setGeneratedLink] = useState('');
+  const [currentShortId, setCurrentShortId] = useState('');
 
   const [isSaving, setIsSaving] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   
   const [sentGifts, setSentGifts] = useState<SentGift[]>([]);
 
+  // WhatsApp Surprise Modal States
+  const [isSurpriseModalOpen, setIsSurpriseModalOpen] = useState(false);
+  const [modalBouquet, setModalBouquet] = useState<Bouquet | null>(null);
+  const [modalShortId, setModalShortId] = useState<string>('');
+  const [modalRecipient, setModalRecipient] = useState<string>('');
+
   useEffect(() => {
     const history = localStorage.getItem('pixel_bouquet_history');
     if (history) {
       try {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSentGifts(JSON.parse(history));
       } catch (e) {
         console.error('Error parsing history', e);
@@ -76,6 +84,7 @@ export default function Home() {
       id: shortId,
       recipient: trimmedRecipient,
       flowerName: selectedBouquet.name,
+      bouquetId: selectedBouquet.id,
       date: new Date().toISOString(),
     };
 
@@ -83,10 +92,8 @@ export default function Home() {
     setSentGifts(updatedHistory);
     localStorage.setItem('pixel_bouquet_history', JSON.stringify(updatedHistory));
 
+    setCurrentShortId(shortId);
     setGeneratedLink(`${window.location.origin}/gift/${shortId}`);
-    setRecipient('');
-    setMessage('');
-    setSender('');
   };
 
   const handleCopyLink = () => {
@@ -96,6 +103,46 @@ export default function Home() {
     setTimeout(() => {
       setIsCopied(false);
     }, 2800);
+  };
+
+  // Open Surprise Modal from Editor
+  const handleOpenSurpriseModalFromEditor = () => {
+    if (!selectedBouquet) return;
+    setModalBouquet(selectedBouquet);
+    setModalShortId(currentShortId);
+    setModalRecipient(recipient.trim());
+    setIsSurpriseModalOpen(true);
+  };
+
+  // Open Surprise Modal from History Card
+  const handleOpenSurpriseModalFromHistory = (gift: SentGift) => {
+    const bouquetObj = BOUQUETS.find(b => b.id === gift.bouquetId || b.name === gift.flowerName) || BOUQUETS[0];
+    setModalBouquet(bouquetObj);
+    setModalShortId(gift.id);
+    setModalRecipient(gift.recipient);
+    setIsSurpriseModalOpen(true);
+  };
+
+  // On successful delivery inside modal
+  const handleSurpriseSuccess = (deliveredShortId: string) => {
+    if (selectedBouquet) {
+      const trimmedRecipient = recipient.trim() || modalRecipient || 'Someone Special';
+      const existing = sentGifts.find(g => g.id === deliveredShortId);
+      if (!existing) {
+        const newGift: SentGift = {
+          id: deliveredShortId,
+          recipient: trimmedRecipient,
+          flowerName: selectedBouquet.name,
+          bouquetId: selectedBouquet.id,
+          date: new Date().toISOString(),
+        };
+        const updatedHistory = [newGift, ...sentGifts];
+        setSentGifts(updatedHistory);
+        localStorage.setItem('pixel_bouquet_history', JSON.stringify(updatedHistory));
+      }
+      setCurrentShortId(deliveredShortId);
+      setGeneratedLink(`${window.location.origin}/gift/${deliveredShortId}`);
+    }
   };
 
   return (
@@ -163,6 +210,8 @@ export default function Home() {
               onClick={() => {
                 setSelectedBouquet(bouquet);
                 setIsDrafting(true);
+                setCurrentShortId('');
+                setGeneratedLink('');
               }}
             >
               {/* Image Container */}
@@ -199,6 +248,7 @@ export default function Home() {
             onClick={() => {
               setIsDrafting(false);
               setGeneratedLink('');
+              setCurrentShortId('');
               setIsCopied(false);
             }}
             className="text-xs text-[#8A7A6F] hover:text-[#3D2B1F] mb-10 flex items-center gap-2 transition-colors relative font-medium uppercase tracking-widest"
@@ -295,17 +345,33 @@ export default function Home() {
               {/* Action Area */}
               <div className="bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgba(160,100,80,0.06)] border border-white/60">
                 {!generatedLink ? (
-                  <button
-                    onClick={handleGenerateLink}
-                    disabled={isGenerateDisabled}
-                    className="w-full relative overflow-hidden group bg-[#3D2B1F] text-white px-8 py-5 rounded-full font-bold tracking-widest uppercase text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_20px_rgba(61,43,31,0.3)] hover:shadow-[0_15px_30px_rgba(61,43,31,0.4)]"
-                  >
-                    <span className="relative z-10">{isSaving ? 'بنجهّز هديتك...' : 'إنشاء رابط الهدية'}</span>
-                    <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
-                  </button>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {/* Primary Button: Send as WhatsApp Surprise */}
+                    <button
+                      onClick={handleOpenSurpriseModalFromEditor}
+                      disabled={isGenerateDisabled}
+                      className="flex-1 relative overflow-hidden group bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white px-8 py-5 rounded-full font-bold tracking-wide text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_25px_rgba(18,140,126,0.3)] hover:shadow-[0_15px_30px_rgba(18,140,126,0.4)] flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <span className="text-lg">💐</span>
+                      <span className="relative z-10">أرسل كمفاجأة على واتساب</span>
+                      <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
+                    </button>
+
+                    {/* Secondary Button: Generate Gift Link */}
+                    <button
+                      onClick={handleGenerateLink}
+                      disabled={isGenerateDisabled}
+                      className="flex-1 relative overflow-hidden group bg-[#3D2B1F] text-white px-8 py-5 rounded-full font-bold tracking-widest uppercase text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_20px_rgba(61,43,31,0.3)] hover:shadow-[0_15px_30px_rgba(61,43,31,0.4)] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span className="relative z-10">{isSaving ? 'بنجهّز هديتك...' : 'إنشاء رابط الهدية'}</span>
+                      <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
+                    </button>
+                  </div>
                 ) : (
-                  <div className="text-center w-full animate-in fade-in slide-in-from-bottom-4 duration-500" dir="rtl">
-                    <p className="text-sm text-[#3D2B1F] font-bold mb-4 uppercase tracking-widest">رابط هديتك جاهز!</p>
+                  <div className="text-center w-full animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4" dir="rtl">
+                    <p className="text-sm text-[#3D2B1F] font-bold uppercase tracking-widest">رابط هديتك جاهز!</p>
+                    
+                    {/* Link Copy Bar */}
                     <div className="flex items-center bg-[#FFFDF9] border border-[#E8DDD3] rounded-2xl overflow-hidden shadow-inner p-1.5">
                       <button
                         onClick={handleCopyLink}
@@ -319,10 +385,20 @@ export default function Home() {
                         type="text"
                         readOnly
                         value={generatedLink}
-                        className="flex-1 p-4 text-sm text-[#8A7A6F] bg-transparent outline-none text-left"
+                        className="flex-1 p-4 text-sm text-[#8A7A6F] bg-transparent outline-none text-left font-mono"
                         dir="ltr"
                       />
                     </div>
+
+                    {/* Deliver on WhatsApp Surprise Button */}
+                    <button
+                      onClick={handleOpenSurpriseModalFromEditor}
+                      className="w-full bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white py-4 px-6 rounded-2xl font-bold text-sm tracking-wide transition-all shadow-[0_8px_20px_rgba(18,140,126,0.25)] hover:shadow-[0_12px_28px_rgba(18,140,126,0.35)] flex items-center justify-center gap-3 cursor-pointer"
+                    >
+                      <span className="text-base">💌</span>
+                      <span>أرسل هذه الهدية كمفاجأة عبر واتساب</span>
+                      <span>←</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -354,28 +430,52 @@ export default function Home() {
                   </span>
                 </div>
                 
-                <div className="flex gap-2 mt-auto pt-4 border-t border-[#E8DDD3]/50">
+                <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-[#E8DDD3]/50">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/gift/${gift.id}`);
+                        alert('تم نسخ الرابط بنجاح!');
+                      }}
+                      className="flex-1 bg-transparent hover:bg-[#FDFBF7] text-[#849F86] border border-[#849F86]/30 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm"
+                    >
+                      نسخ الرابط
+                    </button>
+                    <a
+                      href={`/gift/${gift.id}`}
+                      target="_blank"
+                      className="flex-1 flex justify-center items-center bg-[#C87E6F] hover:bg-[#B56E5F] text-white px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm"
+                    >
+                      عرض الهدية
+                    </a>
+                  </div>
+
+                  {/* Send via WhatsApp button */}
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/gift/${gift.id}`);
-                      alert('تم نسخ الرابط بنجاح!');
-                    }}
-                    className="flex-1 bg-transparent hover:bg-[#FDFBF7] text-[#849F86] border border-[#849F86]/30 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm"
+                    onClick={() => handleOpenSurpriseModalFromHistory(gift)}
+                    className="w-full bg-[#FAF5F0] hover:bg-[#E8F3E9] text-[#128C7E] border border-[#128C7E]/20 py-2.5 px-3 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                   >
-                    نسخ الرابط
+                    <span>أرسل كمفاجأة واتساب 💐</span>
                   </button>
-                  <a
-                    href={`/gift/${gift.id}`}
-                    target="_blank"
-                    className="flex-1 flex justify-center items-center bg-[#C87E6F] hover:bg-[#B56E5F] text-white px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors shadow-sm"
-                  >
-                    عرض الهدية
-                  </a>
                 </div>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {/* Surprise Delivery via WhatsApp Modal */}
+      {isSurpriseModalOpen && modalBouquet && (
+        <SurpriseDeliveryModal
+          isOpen={isSurpriseModalOpen}
+          onClose={() => setIsSurpriseModalOpen(false)}
+          bouquet={modalBouquet}
+          shortId={modalShortId || currentShortId}
+          initialRecipientName={modalRecipient || recipient}
+          senderName={sender}
+          messageText={message}
+          onSuccess={handleSurpriseSuccess}
+        />
       )}
 
     </main>
