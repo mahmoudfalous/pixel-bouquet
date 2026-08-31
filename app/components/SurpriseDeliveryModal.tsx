@@ -33,7 +33,7 @@ export default function SurpriseDeliveryModal({
   const [sentShortId, setSentShortId] = useState(existingShortId || '');
   const [isCopied, setIsCopied] = useState(false);
 
-  // Sync recipient name when opened
+  // Reset modal state only when opened
   useEffect(() => {
     if (isOpen) {
       if (initialRecipientName) {
@@ -42,11 +42,11 @@ export default function SurpriseDeliveryModal({
       setStatus('idle');
       setErrorMessage('');
       setSentShortId(existingShortId || '');
-      if (!phoneNumber || phoneNumber === '') {
+      if (!phoneNumber || phoneNumber.trim() === '') {
         setPhoneNumber('+20 ');
       }
     }
-  }, [isOpen, initialRecipientName, existingShortId]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
