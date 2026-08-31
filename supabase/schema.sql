@@ -8,6 +8,7 @@ create table if not exists public.deliveries (
   bouquet_id text not null,
   recipient_name text,
   phone_number text not null,
+  sender_ip text,
   status text not null default 'pending' check (status in ('pending', 'processing', 'sent', 'failed')),
   error_message text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -17,6 +18,7 @@ create table if not exists public.deliveries (
 -- 2. Create indexes for quick lookups
 create index if not exists idx_deliveries_bouquet_id on public.deliveries(bouquet_id);
 create index if not exists idx_deliveries_status on public.deliveries(status);
+create index if not exists idx_deliveries_sender_ip on public.deliveries(sender_ip);
 create index if not exists idx_deliveries_created_at on public.deliveries(created_at desc);
 
 -- 3. Enable Row Level Security (RLS)

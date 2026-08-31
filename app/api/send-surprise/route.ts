@@ -70,6 +70,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Extract Client IP address (handles Vercel, proxies, Cloudflare, localhost)
+    const forwardedFor = req.headers.get('x-forwarded-for');
+    const realIp = req.headers.get('x-real-ip');
+    const cfConnectingIp = req.headers.get('cf-connecting-ip');
+    const senderIp = cfConnectingIp || (forwardedFor ? forwardedFor.split(',')[0].trim() : realIp) || null;
+
     // 2. Create pending delivery record in Supabase
     const { data: deliveryRecord, error: deliveryInsertError } = await supabase
       .from('deliveries')
@@ -78,7 +84,8 @@ export async function POST(req: NextRequest) {
           bouquet_id: finalShortId,
           recipient_name: finalRecipient || null,
           phone_number: phoneNumber.trim(),
-          status: 'pending'
+          status: 'pending',
+          sender_ip: senderIp
         }
       ])
       .select('id')
