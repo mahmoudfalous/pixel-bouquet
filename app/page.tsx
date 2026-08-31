@@ -44,6 +44,8 @@ export default function Home() {
     }
   }, []);
 
+  const isWhatsAppEnabled = process.env.NEXT_PUBLIC_ENABLE_WHATSAPP !== 'false';
+
   const isFormValid =
     recipient.trim().length > 0 &&
     message.trim().length > 0 &&
@@ -360,23 +362,25 @@ export default function Home() {
               {/* Action Area */}
               <div className="bg-white/60 backdrop-blur-xl p-8 rounded-[2.5rem] shadow-[0_8px_30px_rgba(160,100,80,0.06)] border border-white/60">
                 {!generatedLink ? (
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    {/* Primary Button: Send as WhatsApp Surprise */}
-                    <button
-                      onClick={handleOpenSurpriseModalFromEditor}
-                      disabled={isGenerateDisabled}
-                      className="flex-1 relative overflow-hidden group bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white px-8 py-5 rounded-full font-bold tracking-wide text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_25px_rgba(18,140,126,0.3)] hover:shadow-[0_15px_30px_rgba(18,140,126,0.4)] flex items-center justify-center gap-3 cursor-pointer"
-                    >
-                      <span className="text-lg">💐</span>
-                      <span className="relative z-10">أرسل كمفاجأة على واتساب</span>
-                      <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
-                    </button>
+                  <div className={`flex flex-col ${isWhatsAppEnabled ? 'sm:flex-row' : ''} gap-4`}>
+                    {/* Primary Button: Send as WhatsApp Surprise (if enabled) */}
+                    {isWhatsAppEnabled && (
+                      <button
+                        onClick={handleOpenSurpriseModalFromEditor}
+                        disabled={isGenerateDisabled}
+                        className="flex-1 relative overflow-hidden group bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white px-8 py-5 rounded-full font-bold tracking-wide text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_25px_rgba(18,140,126,0.3)] hover:shadow-[0_15px_30px_rgba(18,140,126,0.4)] flex items-center justify-center gap-3 cursor-pointer"
+                      >
+                        <span className="text-lg">💐</span>
+                        <span className="relative z-10">أرسل كمفاجأة على واتساب</span>
+                        <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
+                      </button>
+                    )}
 
-                    {/* Secondary Button: Generate Gift Link */}
+                    {/* Secondary/Single Button: Generate Gift Link */}
                     <button
                       onClick={handleGenerateLink}
                       disabled={isGenerateDisabled}
-                      className="flex-1 relative overflow-hidden group bg-[#3D2B1F] text-white px-8 py-5 rounded-full font-bold tracking-widest uppercase text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_20px_rgba(61,43,31,0.3)] hover:shadow-[0_15px_30px_rgba(61,43,31,0.4)] flex items-center justify-center gap-2 cursor-pointer"
+                      className={`${isWhatsAppEnabled ? 'flex-1' : 'w-full'} relative overflow-hidden group bg-[#3D2B1F] text-white px-8 py-5 rounded-full font-bold tracking-widest uppercase text-sm transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_20px_rgba(61,43,31,0.3)] hover:shadow-[0_15px_30px_rgba(61,43,31,0.4)] flex items-center justify-center gap-2 cursor-pointer`}
                     >
                       <span className="relative z-10">{isSaving ? 'بنجهّز هديتك...' : 'إنشاء رابط الهدية'}</span>
                       <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
@@ -408,15 +412,17 @@ export default function Home() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div className={`grid grid-cols-1 ${isWhatsAppEnabled ? 'sm:grid-cols-2' : ''} gap-3 pt-2`}>
                       {/* Deliver on WhatsApp Surprise Button */}
-                      <button
-                        onClick={handleOpenSurpriseModalFromEditor}
-                        className="bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white py-3.5 px-5 rounded-2xl font-bold text-xs tracking-wide transition-all shadow-[0_8px_20px_rgba(18,140,126,0.25)] hover:shadow-[0_12px_28px_rgba(18,140,126,0.35)] flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <span>💌</span>
-                        <span>أرسل كمفاجأة واتساب</span>
-                      </button>
+                      {isWhatsAppEnabled && (
+                        <button
+                          onClick={handleOpenSurpriseModalFromEditor}
+                          className="bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white py-3.5 px-5 rounded-2xl font-bold text-xs tracking-wide transition-all shadow-[0_8px_20px_rgba(18,140,126,0.25)] hover:shadow-[0_12px_28px_rgba(18,140,126,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <span>💌</span>
+                          <span>أرسل كمفاجأة واتساب</span>
+                        </button>
+                      )}
 
                       {/* Create Another Bouquet Button */}
                       <button
@@ -487,13 +493,15 @@ export default function Home() {
                     </a>
                   </div>
 
-                  {/* Send via WhatsApp button */}
-                  <button
-                    onClick={() => handleOpenSurpriseModalFromHistory(gift)}
-                    className="w-full bg-[#FAF5F0] hover:bg-[#E8F3E9] text-[#128C7E] border border-[#128C7E]/20 py-2.5 px-3 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                  >
-                    <span>أرسل كمفاجأة واتساب 💐</span>
-                  </button>
+                  {/* Send via WhatsApp button (if enabled) */}
+                  {isWhatsAppEnabled && (
+                    <button
+                      onClick={() => handleOpenSurpriseModalFromHistory(gift)}
+                      className="w-full bg-[#FAF5F0] hover:bg-[#E8F3E9] text-[#128C7E] border border-[#128C7E]/20 py-2.5 px-3 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                    >
+                      <span>أرسل كمفاجأة واتساب 💐</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -502,7 +510,7 @@ export default function Home() {
       )}
 
       {/* Surprise Delivery via WhatsApp Modal */}
-      {isSurpriseModalOpen && modalBouquet && (
+      {isWhatsAppEnabled && isSurpriseModalOpen && modalBouquet && (
         <SurpriseDeliveryModal
           isOpen={isSurpriseModalOpen}
           onClose={() => setIsSurpriseModalOpen(false)}

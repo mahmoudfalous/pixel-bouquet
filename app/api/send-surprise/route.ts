@@ -13,6 +13,18 @@ export interface SendSurprisePayload {
 
 export async function POST(req: NextRequest) {
   try {
+    // Feature flag check
+    const isWhatsAppEnabled =
+      process.env.NEXT_PUBLIC_ENABLE_WHATSAPP !== 'false' &&
+      process.env.ENABLE_WHATSAPP !== 'false';
+
+    if (!isWhatsAppEnabled) {
+      return NextResponse.json(
+        { success: false, error: 'WhatsApp surprise delivery is currently disabled.' },
+        { status: 403 }
+      );
+    }
+
     const body: SendSurprisePayload = await req.json();
     const { shortId: rawShortId, bouquetId, recipientName, phoneNumber, sender, message, bouquetDbId } = body;
 
