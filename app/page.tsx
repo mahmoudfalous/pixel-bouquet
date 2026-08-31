@@ -315,7 +315,12 @@ export default function Home() {
                       placeholder="لأغلى حد،"
                       value={recipient}
                       onChange={(e) => setRecipient(e.target.value)}
-                      className="flex-1 bg-transparent text-2xl font-serif text-[#6B5548] focus:text-[#3D2B1F] focus:outline-none border-b-2 border-dashed border-[#E8DDD3] focus:border-[#C87E6F] pb-2 transition-colors placeholder:text-[#D4B5A8]"
+                      readOnly={Boolean(generatedLink)}
+                      className={`flex-1 bg-transparent text-2xl font-serif text-[#6B5548] pb-2 transition-colors placeholder:text-[#D4B5A8] ${
+                        generatedLink
+                          ? 'border-none cursor-default text-[#3D2B1F] font-bold'
+                          : 'focus:text-[#3D2B1F] focus:outline-none border-b-2 border-dashed border-[#E8DDD3] focus:border-[#C87E6F]'
+                      }`}
                     />
                   </div>
 
@@ -324,8 +329,13 @@ export default function Home() {
                       placeholder="اكتب اللي في قلبك هنا... سيب كلامك ينوّر زي الورد ده..."
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
+                      readOnly={Boolean(generatedLink)}
                       rows={5}
-                      className="w-full bg-transparent text-lg md:text-xl font-serif leading-[2.2] text-[#6B5548] resize-none focus:outline-none border-b-2 border-dashed border-[#E8DDD3] focus:border-[#C87E6F] pb-2 transition-colors placeholder:text-[#D4B5A8]"
+                      className={`w-full bg-transparent text-lg md:text-xl font-serif leading-[2.2] text-[#6B5548] resize-none pb-2 transition-colors placeholder:text-[#D4B5A8] ${
+                        generatedLink
+                          ? 'border-none cursor-default italic'
+                          : 'focus:outline-none border-b-2 border-dashed border-[#E8DDD3] focus:border-[#C87E6F]'
+                      }`}
                     />
                   </div>
 
@@ -336,7 +346,12 @@ export default function Home() {
                       placeholder="المرسل"
                       value={sender}
                       onChange={(e) => setSender(e.target.value)}
-                      className="w-64 bg-transparent text-xl font-serif text-[#6B5548] focus:text-[#3D2B1F] focus:outline-none border-b-2 border-dashed border-[#E8DDD3] focus:border-[#C87E6F] pb-2 transition-colors placeholder:text-[#D4B5A8]"
+                      readOnly={Boolean(generatedLink)}
+                      className={`w-64 bg-transparent text-xl font-serif text-[#6B5548] pb-2 transition-colors placeholder:text-[#D4B5A8] ${
+                        generatedLink
+                          ? 'border-none cursor-default font-bold text-[#3D2B1F]'
+                          : 'focus:text-[#3D2B1F] focus:outline-none border-b-2 border-dashed border-[#E8DDD3] focus:border-[#C87E6F]'
+                      }`}
                     />
                   </div>
                 </div>
@@ -369,7 +384,10 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="text-center w-full animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4" dir="rtl">
-                    <p className="text-sm text-[#3D2B1F] font-bold uppercase tracking-widest">رابط هديتك جاهز!</p>
+                    <div className="inline-flex items-center gap-2 bg-[#E8F3E9] text-[#849F86] px-4 py-1.5 rounded-full text-xs font-bold mb-1">
+                      <span>✓</span>
+                      <span>تم توثيق هديتك ورابطها جاهز</span>
+                    </div>
                     
                     {/* Link Copy Bar */}
                     <div className="flex items-center bg-[#FFFDF9] border border-[#E8DDD3] rounded-2xl overflow-hidden shadow-inner p-1.5">
@@ -379,7 +397,7 @@ export default function Home() {
                           isCopied ? 'bg-[#849F86] hover:bg-[#728A74]' : 'bg-[#C87E6F] hover:bg-[#B56E5F]'
                         }`}
                       >
-                        {isCopied ? 'تم النسخ' : 'نسخ الرابط'}
+                        {isCopied ? 'تم النسخ ✓' : 'نسخ الرابط'}
                       </button>
                       <input
                         type="text"
@@ -390,15 +408,34 @@ export default function Home() {
                       />
                     </div>
 
-                    {/* Deliver on WhatsApp Surprise Button */}
-                    <button
-                      onClick={handleOpenSurpriseModalFromEditor}
-                      className="w-full bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white py-4 px-6 rounded-2xl font-bold text-sm tracking-wide transition-all shadow-[0_8px_20px_rgba(18,140,126,0.25)] hover:shadow-[0_12px_28px_rgba(18,140,126,0.35)] flex items-center justify-center gap-3 cursor-pointer"
-                    >
-                      <span className="text-base">💌</span>
-                      <span>أرسل هذه الهدية كمفاجأة عبر واتساب</span>
-                      <span>←</span>
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      {/* Deliver on WhatsApp Surprise Button */}
+                      <button
+                        onClick={handleOpenSurpriseModalFromEditor}
+                        className="bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white py-3.5 px-5 rounded-2xl font-bold text-xs tracking-wide transition-all shadow-[0_8px_20px_rgba(18,140,126,0.25)] hover:shadow-[0_12px_28px_rgba(18,140,126,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>💌</span>
+                        <span>أرسل كمفاجأة واتساب</span>
+                      </button>
+
+                      {/* Create Another Bouquet Button */}
+                      <button
+                        onClick={() => {
+                          setIsDrafting(false);
+                          setSelectedBouquet(null);
+                          setGeneratedLink('');
+                          setCurrentShortId('');
+                          setRecipient('');
+                          setMessage('');
+                          setSender('');
+                          setIsCopied(false);
+                        }}
+                        className="bg-[#3D2B1F] hover:bg-black text-white py-3.5 px-5 rounded-2xl font-bold text-xs tracking-wide transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>🌸</span>
+                        <span>اصنع باقة جديدة</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
